@@ -1,6 +1,8 @@
 #include <cmath>
+#include <cstring>
 #include <iostream>
 #include <vector>
+#include <cstring>
 
 using namespace std;
 
@@ -42,5 +44,7 @@ class Analyzer{
 
 int main(){
     Tick t = {"SHU", double(0.0), 1};
-
+    string s1 = "Hello";
+    string s2 = "World";
+    cout<<int(s1>s2);
 }
