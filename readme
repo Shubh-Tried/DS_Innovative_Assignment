@@ -1,0 +1,7 @@
+Working:
+1)upgrade Process-> need to change the whole process to a pointer since the variable is stored 
+as a pointer and not a static variable
+2)Write User Data
+
+DONE:
+login and registering new user
