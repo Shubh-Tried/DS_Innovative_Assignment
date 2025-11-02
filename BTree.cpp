@@ -1,30 +1,24 @@
+#include <cstddef>
 #include <vector>
 #include <cmath>
+#include <iostream>
 
-using namespace std;
+#include "BTree.h";
 
 typedef int Tick;
 
-struct EachNode{
-    EachNode *l;
-    vector<Tick> d1;
-    EachNode *m;
-    vector<Tick> d2;
-    EachNode *r;
-    EachNode(){
-        l = m = r = nullptr;
-    }
-    EachNode(vector<Tick> t, EachNode *l = nullptr,EachNode *m = nullptr){
-        d1 = t;
-        this->l = l;
-        this->m = m;
-        this->r = nullptr;
-    }
-};
+BTree::EachNode::EachNode(){
+    l = m = r = nullptr;
+}
 
+BTree::EachNode::EachNode(vector<Tick> t, EachNode *l,EachNode *m){
+    d1 = t;
+    this->l = l;
+    this->m = m;
+    this->r = nullptr;
+}
 
-//generalizing splitting
-bool split(EachNode **en, EachNode **n1){
+bool BTree::split(EachNode **en, EachNode **n1){
     EachNode *n2 = new EachNode((*en)->d1, (*en)->l);
     EachNode *n3 = new EachNode((*en)->d2, (*en)->m, (*en)->r);
     // EachNode *l = (*en)->l;
@@ -67,37 +61,21 @@ bool split(EachNode **en, EachNode **n1){
     return true;
 }
 
-bool insertEle(EachNode **en, vector<Tick> t){
+bool BTree::insertEle(EachNode **en, vector<Tick> t){
+    if(en == nullptr){
+        cout<<"no element exists";
+        return false;
+    }
+    if(*en == nullptr) {
+        *en = new EachNode(t);
+        return true;
+    }
+    if(t.empty())   return false;
     bool promoted = false;
-    if(t[0] <= (*en)->d1[0] && (*en)->l ==nullptr){
-        if(isnan((*en)->d2[0])){
-            (*en)->d2 =(*en)->d1;
-            (*en)->r = (*en)->m;
-            (*en)->m = nullptr;
-            (*en)->d1 = t;
-        }
-        else{
-            EachNode *n = new EachNode(t);
-            promoted = split(en, &n);
-        }
-    }
-    else if(t[0]<=(*en)->d1[0]){
-        promoted = insertEle(&(*en)->l, t); 
-        
-        //if the child node does not have a second data then we will do splitting
-        if(promoted){
-            promoted = split(en, &(*en)->l);
-        }
-    }
-    //checking for null pointer to check if the node is leaf node or not
-    else if(t[0]<=(*en)->d2[0] && (*en)->m == nullptr){
-        EachNode *n = new EachNode(t);
-        promoted = split(en, &n); 
-    }
-
-//l is null suggests that the node is a leaf node
+    
+    //l is null suggests that the node is a leaf node
     if((*en)->l == nullptr){
-        if(isnan((*en)->d2[0]))
+        if((*en)->d2.empty())
             (*en)->d2 = (*en)->d1[0]>t[0]?(*en)->d1:t;
         else
         {
@@ -105,31 +83,24 @@ bool insertEle(EachNode **en, vector<Tick> t){
             promoted = split(en, &n);
         }
     }
+    //the node has children
     else{
+        EachNode **n;
         if(t[0]<=(*en)->d1[0]){
+            n = &(*en)->l;
             promoted = insertEle(&(*en)->l, t);
-
-            //if the child node does not have a second data then we will do splitting
-            if(promoted){
-                promoted = split(en, &(*en)->l);
-            }
         }
-        if(isnan((*en)->d2[0])){
-            if((*en)->d1[0]>t[0]){
-                (*en)->d2 = (*en)->d1;
-                (*en)->d1 = t;
-                (*en)->r = (*en)->m;
-                (*en)->m = (*en)->l;
-                (*en)->l = nullptr;
-            }
-            else{
-                (*en)->d2 = t;
-            }
+        else if((*en)->d2.empty()||t[0]<= (*en)->d2[0]){
+            n = &(*en)->m;
+            promoted = insertEle(&(*en)->m, t);
+        }
+        else {
+            n = &(*en)->r;
+            promoted = insertEle(&(*en)->r, t);
+        }
+        if(promoted){
+            promoted = split(en, n);
         }
     }
     return promoted;
-}
-
-int main(){
-    return 0;
 }
