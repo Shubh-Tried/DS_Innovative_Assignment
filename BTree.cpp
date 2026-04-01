@@ -11,13 +11,13 @@ BTree::EachNode::EachNode() {
   d1 = d2 = nullptr;
 }
 
-BTree::EachNode::EachNode(vector<Tick> *t, EachNode *l, EachNode *m) {
-  d1 = t;
+BTree::EachNode::EachNode(index *i, EachNode *l, EachNode *m) {
+  d1 = i;
   this->l = l;
   this->m = m;
   this->r = nullptr;
   this->d2 = nullptr;
-}
+} 
 
 // bool BTree::split(EachNode **en, EachNode **n1) {
 //   EachNode *n2 = new EachNode((*en)->d1, (*en)->l);
@@ -93,44 +93,94 @@ bool BTree::split(EachNode **en,EachNode **n1){
 }
 
 
-bool BTree::insertEle(EachNode **en, vector<Tick> *t) {
-  if (en == nullptr) {
-    cout << "no element exists";
+// bool BTree::insertEle(EachNode **en, vector<Tick> *t) {
+//   if (en == nullptr) {
+//     cout << "no element exists";
+//     return false;
+//   }
+//   if (*en == nullptr) {
+//     *en = new EachNode(t);
+//     return true;
+//   }
+//   if ((*t).empty())
+//     return false;
+//   bool promoted = false;
+
+//   // l is null suggests that the node is a leaf node
+//   if ((*en)->l == nullptr) {
+//     if ((*(*en)->d2).empty())
+//       (*en)->d2 = (*(*en)->d1)[0].symbol > (*t)[0].symbol ? (*en)->d1 : t;
+//     else {
+//       EachNode *n = new EachNode(t);
+//       promoted = split(en, &n);
+//     }
+//   }
+//   // the node has children
+//   else {
+//     EachNode **n;
+//     if ((*t)[0].symbol <= (*(*en)->d1)[0].symbol) {
+//       n = &(*en)->l;
+//       promoted = insertEle(&(*en)->l, t);
+//     } else if ((*(*en)->d2).empty() ||
+//                (*t)[0].symbol <= (*(*en)->d2)[0].symbol) {
+//       n = &(*en)->m;
+//       promoted = insertEle(&(*en)->m, t);
+//     } else {
+//       n = &(*en)->r;
+//       promoted = insertEle(&(*en)->r, t);
+//     }
+//     if (promoted) {
+//       promoted = split(en, n);
+//     }
+//   }
+//   return promoted;
+// }
+
+bool BTree::insertEle(EachNode **en, index *val){
+  if(en == nullptr){
+    cout << "No element exists";
     return false;
   }
-  if (*en == nullptr) {
-    *en = new EachNode(t);
+  
+  if(*en == nullptr){
+    *en = new EachNode(val);
     return true;
   }
-  if ((*t).empty())
-    return false;
+  
   bool promoted = false;
 
-  // l is null suggests that the node is a leaf node
-  if ((*en)->l == nullptr) {
-    if ((*(*en)->d2).empty())
-      (*en)->d2 = (*(*en)->d1)[0].symbol > (*t)[0].symbol ? (*en)->d1 : t;
-    else {
-      EachNode *n = new EachNode(t);
-      promoted = split(en, &n);
+  if((*en)->l == nullptr){
+    if((*en)->d2 == nullptr){
+      if(val->key < (*en)->d1->key){
+        (*en)->d2 = (*en)->d1;
+        (*en)->d1 = val;
+      }
+      else{
+        (*en)->d2 = val;
+      }
+    }
+    else{
+      EachNode *n = new EachNode(val);
+      promoted = split(en,&n);
     }
   }
-  // the node has children
-  else {
-    EachNode **n;
-    if ((*t)[0].symbol <= (*(*en)->d1)[0].symbol) {
-      n = &(*en)->l;
-      promoted = insertEle(&(*en)->l, t);
-    } else if ((*(*en)->d2).empty() ||
-               (*t)[0].symbol <= (*(*en)->d2)[0].symbol) {
-      n = &(*en)->m;
-      promoted = insertEle(&(*en)->m, t);
-    } else {
-      n = &(*en)->r;
-      promoted = insertEle(&(*en)->r, t);
+  else{
+    EachNode **child;
+
+    if(val->key < (*en)->d1->key){
+      child = &(*en)->l;
     }
-    if (promoted) {
-      promoted = split(en, n);
+    else if((*en)->d2 == nullptr || val->key < (*en)->d2->key){
+      child = &(*en)->m;
+    } 
+    else{
+      child = &(*en)->r;
+    }
+
+    promoted = insertEle(child, val);
+
+    if(promoted){
+      promoted = split(en, child);
     }
   }
   return promoted;
