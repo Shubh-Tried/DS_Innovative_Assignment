@@ -39,19 +39,19 @@ public:
 
 struct EachNode {
     EachNode *l;
-    index *d1;
+    struct index *d1;
     EachNode *m;
-    index *d2;
+    struct index *d2;
     EachNode *r;
     EachNode();
-    EachNode(index *,EachNode * = nullptr, EachNode * =nullptr);
+    EachNode(struct index *,EachNode * = nullptr, EachNode * =nullptr);
   };
 
   EachNode *h;
   // generalizing splitting
   bool split(EachNode **, EachNode **);
 
-  bool insertEle(EachNode **, index *);
+  bool insertEle(EachNode **, struct index *);
 
-  index* searchEle(EachNode *const *, int);
+  struct index* searchEle(EachNode *const *, int);
 };

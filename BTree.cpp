@@ -1,8 +1,8 @@
-#include <cmath>
+
 #include <cstddef>
 #include <iostream>
 #include <vector>
-#include <algorithm>
+
 
 #include "BTree.h"
 
@@ -11,7 +11,7 @@ BTree::EachNode::EachNode() {
   d1 = d2 = nullptr;
 }
 
-BTree::EachNode::EachNode(index *i, EachNode *l, EachNode *m) {
+BTree::EachNode::EachNode(struct index *i, EachNode *l, EachNode *m) {
   d1 = i;
   this->l = l;
   this->m = m;
@@ -60,36 +60,80 @@ BTree::EachNode::EachNode(index *i, EachNode *l, EachNode *m) {
 //   return true;
 // }
 
-bool BTree::split(EachNode **en,EachNode **n1){
+bool BTree::split(EachNode **en, EachNode **n1) {
+  EachNode *promoted = *n1;
 
-  vector<index*> keys;
-  keys.push_back((*en)->d1);
 
-  if((*en)->d2 != nullptr)
-     keys.push_back((*en)->d2);
+  if ((*en)->d2 == nullptr) {
+    if (promoted->d1->key < (*en)->d1->key) {
+      
+      (*en)->d2 = (*en)->d1;
+      (*en)->d1 = promoted->d1;
+      (*en)->r = (*en)->m;
+      (*en)->m = promoted->m;
+      (*en)->l = promoted->l;
+    } else {
+      // child larger than parent
+      (*en)->d2 = promoted->d1;
+      *n1 = promoted->l;
+      (*en)->r = promoted->m;
+    }
+    delete promoted;
+    return false;
+  }
+
   
-  keys.push_back((*n1)->d1);
+  struct index *left_key, *mid_key, *right_key;
+  EachNode *c0, *c1, *c2, *c3;
 
-  sort(keys.begin(), keys.end(), [](index* a, index* b){
-     return a->key < b->key;
-  });
-  
-  index* lkey = keys[0];
-  index* mkey = keys[1];
-  index* rkey = keys[2];
+  int pk  = promoted->d1->key;
+  int d1k = (*en)->d1->key;
+  int d2k = (*en)->d2->key;
 
-  EachNode *lnode = new EachNode(lkey);
-  EachNode *rnode = new EachNode(rkey);
+  if (pk < d1k) {
+    // Promoted key is smallest (came from left child split)
+    left_key  = promoted->d1;
+    mid_key   = (*en)->d1;
+    right_key = (*en)->d2;
 
-  (*en)->d1 = mkey;
+
+    c0 = promoted->l;
+    c1 = promoted->m;
+    c2 = (*en)->m;
+    c3 = (*en)->r;
+  } else if (pk < d2k) {
+    // Promoted key is in the middle (came from middle child split)
+    left_key  = (*en)->d1;
+    mid_key   = promoted->d1;
+    right_key = (*en)->d2;
+    c0 = (*en)->l;
+    c1 = promoted->l;
+    c2 = promoted->m;
+    c3 = (*en)->r;
+  } else {
+    // Promoted key is largest (came from right child split, or leaf overflow)
+    left_key  = (*en)->d1;
+    mid_key   = (*en)->d2;
+    right_key = promoted->d1;
+    c0 = (*en)->l;
+    c1 = (*en)->m;
+    c2 = promoted->l;
+    c3 = promoted->m;
+  }
+
+  // Create new left and right children with properly distributed child pointers
+  EachNode *lnode = new EachNode(left_key, c0, c1);
+  EachNode *rnode = new EachNode(right_key, c2, c3);
+
+  // Promote middle key up into the current node
+  (*en)->d1 = mid_key;
   (*en)->d2 = nullptr;
+  (*en)->l  = lnode;
+  (*en)->m  = rnode;
+  (*en)->r  = nullptr;
 
-  (*en)->l = lnode;
-  (*en)->m = rnode;
-  (*en)->r = nullptr;
-
-  return true;  
-
+  delete promoted;  // container no longer needed
+  return true;
 }
 
 
@@ -136,80 +180,92 @@ bool BTree::split(EachNode **en,EachNode **n1){
 //   return promoted;
 // }
 
-bool BTree::insertEle(EachNode **en, index *val){
-  if(en == nullptr){
+bool BTree::insertEle(EachNode **en, struct index *val) {
+  if (en == nullptr) {
     cout << "No element exists";
     return false;
   }
-  
-  if(*en == nullptr){
+
+  if (*en == nullptr) {
     *en = new EachNode(val);
     return true;
   }
-  
+
+  // --- Duplicate key handling: append data to existing index ---
+  if ((*en)->d1->key == val->key) {
+    for (auto &s : val->data) {
+      (*en)->d1->data.push_back(s);
+    }
+    return false;
+  }
+  if ((*en)->d2 != nullptr && (*en)->d2->key == val->key) {
+    for (auto &s : val->data) {
+      (*en)->d2->data.push_back(s);
+    }
+    return false;
+  }
+
   bool promoted = false;
 
-  if((*en)->l == nullptr){
-    if((*en)->d2 == nullptr){
-      if(val->key < (*en)->d1->key){
+  // Leaf node (no children)
+  if ((*en)->l == nullptr) {
+    if ((*en)->d2 == nullptr) {
+      // Room in this leaf — just insert
+      if (val->key < (*en)->d1->key) {
         (*en)->d2 = (*en)->d1;
         (*en)->d1 = val;
-      }
-      else{
+      } else {
         (*en)->d2 = val;
       }
-    }
-    else{
+    } else {
+      // Leaf is full — split
       EachNode *n = new EachNode(val);
-      promoted = split(en,&n);
+      promoted = split(en, &n);
     }
   }
-  else{
+  // Internal node (has children)
+  else {
     EachNode **child;
 
-    if(val->key < (*en)->d1->key){
+    if (val->key < (*en)->d1->key) {
       child = &(*en)->l;
-    }
-    else if((*en)->d2 == nullptr || val->key < (*en)->d2->key){
+    } else if ((*en)->d2 == nullptr || val->key < (*en)->d2->key) {
       child = &(*en)->m;
-    } 
-    else{
+    } else {
       child = &(*en)->r;
     }
 
     promoted = insertEle(child, val);
 
-    if(promoted){
+    if (promoted) {
       promoted = split(en, child);
     }
   }
   return promoted;
 }
 
-vector<Tick> *BTree::searchEle(EachNode *const *en, string &str) {
+struct index* BTree::searchEle(EachNode *const *en, int key) {
   if (en == nullptr || *en == nullptr)
     return nullptr;
 
-  // If we reached a leaf node
-  if ((*en)->l == nullptr) {
-    // check d1
-    if (!(*(*en)->d1).empty() && (*(*en)->d1)[0].symbol == str)
-      return (*en)->d1;
-    // check d2
-    if ((*en)->d2 && !(*(*en)->d2).empty() && (*(*en)->d2)[0].symbol == str)
-      return (*en)->d2;
-    return nullptr;
-  }
-
-  if ((*(*en)->d1)[0].symbol == str)
+  // Check d1
+  if ((*en)->d1->key == key)
     return (*en)->d1;
-  if ((*en)->d2 && !(*(*en)->d2).empty() && (*(*en)->d2)[0].symbol == str)
+
+  // Check d2
+  if ((*en)->d2 != nullptr && (*en)->d2->key == key)
     return (*en)->d2;
 
-  if (str < (*(*en)->d1)[0].symbol)
-    return searchEle(&(*en)->l, str);
-  else if (!(*en)->d2 || (*(*en)->d2).empty() || str < (*(*en)->d2)[0].symbol)
-    return searchEle(&(*en)->m, str);
+  // Leaf node — key not found
+  if ((*en)->l == nullptr)
+    return nullptr;
+
+  // Recurse into the correct child
+  if (key < (*en)->d1->key)
+    return searchEle(&(*en)->l, key);
+  else if ((*en)->d2 == nullptr || key < (*en)->d2->key)
+    return searchEle(&(*en)->m, key);
   else
-    return searchEle(&(*en)->r, str);
+    return searchEle(&(*en)->r, key);
 }
+
