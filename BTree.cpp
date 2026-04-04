@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <iostream>
 #include <vector>
+#include <algorithm>
 
 
 #include "BTree.h"
@@ -193,15 +194,17 @@ bool BTree::insertEle(EachNode **en, struct index *val) {
 
 
   if ((*en)->d1->key == val->key) {
-    for (auto &s : val->data) {
+    for (schema &s : val->data) {
       (*en)->d1->data.push_back(s);
     }
+
     return false;
   }
   if ((*en)->d2 != nullptr && (*en)->d2->key == val->key) {
-    for (auto &s : val->data) {
+    for (schema &s : val->data) {
       (*en)->d2->data.push_back(s);
     }
+    
     return false;
   }
 
