@@ -53,5 +53,5 @@ struct EachNode {
 
   bool insertEle(EachNode **, struct index *);
 
-  struct index* searchEle(EachNode *const *, int);
+  struct index* searchId(EachNode *const *, int);
 };
